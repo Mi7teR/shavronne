@@ -1,13 +1,6 @@
 package ninja
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/url"
-	"time"
-)
+import "strings"
 
 type Items struct {
 	Items []Item `json:"lines"`
@@ -28,6 +21,8 @@ type Item struct {
 	GemQuality        float64             `json:"gemQuality"`
 	MapTier           float64             `json:"mapTier"`
 	Links             float64             `json:"links"`
+	CurrencyName      string              `json:"currencyTypeName"`
+	ChaosPrice        float64             `json:"chaosEquivalent"`
 }
 
 func (item *Item) GetExplicitModifiersAsString() string {
@@ -40,103 +35,13 @@ func (item *Item) GetExplicitModifiersAsString() string {
 	return r
 }
 
-func getItems(uri string) Items {
-	var items Items
-	resp, err := http.Get(uri)
-	defer resp.Body.Close()
-	if err != nil {
-		log.Println(err)
-		return items
+func (items *Items) Filter(itemName string) []Item {
+	var result []Item
+	for _, item := range items.Items {
+		if strings.Contains(strings.ToLower(item.Name), strings.ToLower(itemName)) ||
+			strings.Contains(strings.ToLower(item.CurrencyName), strings.ToLower(itemName)) {
+			result = append(result, item)
+		}
 	}
-	body, _ := ioutil.ReadAll(resp.Body)
-	json.Unmarshal(body, &items)
-	return items
-}
-
-func getDivinationCards(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetDivinationCardsOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getEssences(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetEssenceOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getGems(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetSkillGemOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getProphecies(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetProphecyOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getMaps(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetMapOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getUniqueMaps(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetUniqueMapOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getJewels(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetUniqueJewelOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getFlasks(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetUniqueFlaskOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getWeapons(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetUniqueWeaponOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getArmours(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetUniqueArmourOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
-}
-
-func getAccessories(league string) Items {
-	league = url.PathEscape(league)
-	t := time.Now()
-	currentDate := t.Format("2006-01-02")
-	uri := ninjaUrl + "GetUniqueAccessoryOverview?League=" + league + "&date=" + currentDate
-	return getItems(uri)
+	return result
 }

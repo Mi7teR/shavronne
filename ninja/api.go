@@ -1,8 +1,13 @@
 package ninja
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/patrickmn/go-cache"
-	"strings"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -15,153 +20,55 @@ func init() {
 	c = cache.New(30*time.Minute, 32*time.Minute)
 }
 
-func GetDivinationCard(cardName string) []Item {
-	var result []Item
+const (
+	CategoryDivinationCards = iota
+	CategoryCurrency
+	CategoryFragments
+	CategoryEssences
+	CategoryGems
+	CategoryProphecies
+	CategoryMaps
+	CategoryUniques
+)
+
+var Categories = map[int][]string{
+	CategoryDivinationCards: {"DivinationCards"},
+	CategoryCurrency:        {"Currency"},
+	CategoryFragments:       {"Fragment"},
+	CategoryEssences:        {"Essence"},
+	CategoryGems:            {"SkillGem"},
+	CategoryProphecies:      {"Prophecy"},
+	CategoryMaps:            {"UniqueMap", "Map"},
+	CategoryUniques:         {"UniqueJewel", "UniqueFlask", "UniqueWeapon", "UniqueArmour", "UniqueAccessory"},
+}
+
+func SearchItems(category int, itemName string) []Item {
 	var items Items
-	x, found := c.Get("cards")
+	x, found := c.Get(fmt.Sprintf("%d", category))
 	if found {
 		items = x.(Items)
 	} else {
-		items = getDivinationCards(League)
-		c.Set("cards", items, cache.DefaultExpiration)
-	}
-	for _, item := range items.Items {
-		if strings.Contains(strings.ToLower(item.Name), strings.ToLower(cardName)) {
-			result = append(result, item)
+		categories := Categories[category]
+		for _, categoryItem := range categories {
+			items.Items = append(items.Items, getItems(categoryItem, League).Items...)
 		}
+		c.Set(fmt.Sprintf("%d", category), items, cache.DefaultExpiration)
 	}
-	return result
+	return items.Filter(itemName)
 }
 
-func GetCurrency(currencyName string) ([]Currency, []CurrencyDetails) {
-	var currency []Currency
-	var currencies Currencies
-	x, found := c.Get("currency")
-	if found {
-		currencies = x.(Currencies)
-	} else {
-		currencies = getCurrency(League)
-		c.Set("currency", currencies, cache.DefaultExpiration)
-	}
-	for _, curr := range currencies.Lines {
-		if strings.Contains(strings.ToLower(curr.CurrencyName), strings.ToLower(currencyName)) {
-			currency = append(currency, curr)
-		}
-	}
-	return currency, currencies.CurrencyDetails
-}
-
-func GetFragments(fragmentName string) ([]Currency, []CurrencyDetails) {
-	var fragment []Currency
-	var fragments Currencies
-	x, found := c.Get("fragments")
-	if found {
-		fragments = x.(Currencies)
-	} else {
-		fragments = getFragments(League)
-		c.Set("fragments", fragments, cache.DefaultExpiration)
-	}
-	for _, frag := range fragments.Lines {
-		if strings.Contains(strings.ToLower(frag.CurrencyName), strings.ToLower(fragmentName)) {
-			fragment = append(fragment, frag)
-		}
-	}
-	return fragment, fragments.CurrencyDetails
-}
-
-func GetEssences(essenceName string) []Item {
-	var result []Item
+func getItems(category, league string) Items {
 	var items Items
-	x, found := c.Get("essences")
-	if found {
-		items = x.(Items)
-	} else {
-		items = getEssences(League)
-		c.Set("essences", items, cache.DefaultExpiration)
+	league = url.PathEscape(league)
+	currentDate := time.Now().Format("2006-01-02")
+	uri := fmt.Sprintf("%sGet%sOverview?League=%s&date=%s", ninjaUrl, category, league, currentDate)
+	resp, err := http.Get(uri)
+	defer resp.Body.Close()
+	if err != nil {
+		log.Println(err)
+		return items
 	}
-	for _, item := range items.Items {
-		if strings.Contains(strings.ToLower(item.Name), strings.ToLower(essenceName)) {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
-func GetGems(gemName string) []Item {
-	var result []Item
-	var items Items
-	x, found := c.Get("gems")
-	if found {
-		items = x.(Items)
-	} else {
-		items = getGems(League)
-		c.Set("gems", items, cache.DefaultExpiration)
-	}
-	for _, item := range items.Items {
-		if strings.Contains(strings.ToLower(item.Name), strings.ToLower(gemName)) {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
-func GetProphecies(prophecyName string) []Item {
-	var result []Item
-	var items Items
-	x, found := c.Get("prophecies")
-	if found {
-		items = x.(Items)
-	} else {
-		items = getProphecies(League)
-		c.Set("prophecies", items, cache.DefaultExpiration)
-	}
-	for _, item := range items.Items {
-		if strings.Contains(strings.ToLower(item.Name), strings.ToLower(prophecyName)) {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
-func GetMaps(itemName string) []Item {
-	var result []Item
-	var items Items
-	x, found := c.Get("maps")
-	if found {
-		items = x.(Items)
-	} else {
-		items = getMaps(League)
-		t := &items
-		t.Items = append(t.Items, getUniqueMaps(League).Items...)
-		c.Set("maps", items, cache.DefaultExpiration)
-	}
-	for _, item := range items.Items {
-		if strings.Contains(strings.ToLower(item.Name), strings.ToLower(itemName)) {
-			result = append(result, item)
-		}
-	}
-	return result
-}
-
-func GetUniques(itemName string) []Item {
-	var result []Item
-	var items Items
-	x, found := c.Get("uniques")
-	if found {
-		items = x.(Items)
-	} else {
-		items = getJewels(League)
-		t := &items
-		t.Items = append(t.Items, getFlasks(League).Items...)
-		t.Items = append(t.Items, getWeapons(League).Items...)
-		t.Items = append(t.Items, getArmours(League).Items...)
-		t.Items = append(t.Items, getAccessories(League).Items...)
-		c.Set("uniques", items, cache.DefaultExpiration)
-	}
-	for _, item := range items.Items {
-		if strings.Contains(strings.ToLower(item.Name), strings.ToLower(itemName)) {
-			result = append(result, item)
-		}
-	}
-	return result
+	body, _ := ioutil.ReadAll(resp.Body)
+	json.Unmarshal(body, &items)
+	return items
 }
