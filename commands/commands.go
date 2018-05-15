@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-const discordMessageLength = 2000
-
 func Process(message string) (response []string) {
 	if strings.HasPrefix(message, "!h") {
 		response = help()
@@ -20,32 +18,23 @@ func Process(message string) (response []string) {
 		response = append(response, message)
 		return
 	}
-	if strings.HasPrefix(message, "!d ") {
-		response = createSearchRequest(message, "!d ", divinationCards)
+
+	commands := map[string]func(message string) (response []string){
+		"!d ": divinationCards,
+		"!c ": currency,
+		"!с ": currency,
+		"!f ": fragments,
+		"!e ": essences,
+		"!g ": gems,
+		"!p ": prophecies,
+		"!m ": maps,
+		"!u ": uniques,
 	}
-	if strings.HasPrefix(message, "!c ") {
-		response = createSearchRequest(message, "!c ", currency)
-	}
-	if strings.HasPrefix(message, "!с ") {
-		response = createSearchRequest(message, "!с ", currency)
-	}
-	if strings.HasPrefix(message, "!f ") {
-		response = createSearchRequest(message, "!f ", fragments)
-	}
-	if strings.HasPrefix(message, "!e ") {
-		response = createSearchRequest(message, "!e ", essences)
-	}
-	if strings.HasPrefix(message, "!g ") {
-		response = createSearchRequest(message, "!g ", gems)
-	}
-	if strings.HasPrefix(message, "!p ") {
-		response = createSearchRequest(message, "!p ", prophecies)
-	}
-	if strings.HasPrefix(message, "!m ") {
-		response = createSearchRequest(message, "!m ", maps)
-	}
-	if strings.HasPrefix(message, "!u ") {
-		response = createSearchRequest(message, "!u ", uniques)
+
+	for command, f := range commands {
+		if strings.HasPrefix(message, command) {
+			response = createSearchRequest(message, command, f)
+		}
 	}
 	return
 }
@@ -84,10 +73,9 @@ func notFoundError() string {
 }
 
 func divinationCards(message string) (response []string) {
-	items := ninja.GetDivinationCard(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryDivinationCards, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.Name)
 			itemMessage += fmt.Sprintf("_%s_\n", ninja.ParseSpecialText(item.FlavourText))
@@ -96,15 +84,7 @@ func divinationCards(message string) (response []string) {
 			itemMessage += fmt.Sprintf("**Stack size:** ```%d```\n", item.StackSize)
 			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosValue)
 			itemMessage += fmt.Sprintf("**Price in Exalted Orbs:** ```%.2f```\n", item.ExaltedValue)
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())
@@ -113,22 +93,13 @@ func divinationCards(message string) (response []string) {
 }
 
 func currency(message string) (response []string) {
-	items, _ := ninja.GetCurrency(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryCurrency, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.CurrencyName)
-			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%s```\n", item.Price())
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosPrice)
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())
@@ -137,22 +108,13 @@ func currency(message string) (response []string) {
 }
 
 func fragments(message string) (response []string) {
-	items, _ := ninja.GetFragments(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryFragments, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.CurrencyName)
-			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%s```\n", item.Price())
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosPrice)
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())
@@ -161,24 +123,15 @@ func fragments(message string) (response []string) {
 }
 
 func essences(message string) (response []string) {
-	items := ninja.GetEssences(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryEssences, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.Name)
 			itemMessage += fmt.Sprintf("_%s_\n", item.GetExplicitModifiersAsString())
 			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosValue)
 			itemMessage += fmt.Sprintf("**Price in Exalted Orbs:** ```%.2f```\n", item.ExaltedValue)
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())
@@ -187,10 +140,9 @@ func essences(message string) (response []string) {
 }
 
 func gems(message string) (response []string) {
-	items := ninja.GetGems(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryGems, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.Name)
 			itemMessage += fmt.Sprintf("_%s_\n", item.GetExplicitModifiersAsString())
@@ -198,15 +150,7 @@ func gems(message string) (response []string) {
 			itemMessage += fmt.Sprintf("**Quality:** ```%.2f```\n", item.GemQuality)
 			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosValue)
 			itemMessage += fmt.Sprintf("**Price in Exalted Orbs:** ```%.2f```\n", item.ExaltedValue)
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())
@@ -215,25 +159,16 @@ func gems(message string) (response []string) {
 }
 
 func prophecies(message string) (response []string) {
-	items := ninja.GetProphecies(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryProphecies, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.Name)
 			itemMessage += fmt.Sprintf("_%s_\n", ninja.ParseSpecialText(item.FlavourText))
 			itemMessage += fmt.Sprintf("**Prophecy:**\n ```%s```\n", ninja.ParseSpecialText(item.ProphecyText))
 			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosValue)
 			itemMessage += fmt.Sprintf("**Price in Exalted Orbs:** ```%.2f```\n", item.ExaltedValue)
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())
@@ -242,10 +177,9 @@ func prophecies(message string) (response []string) {
 }
 
 func maps(message string) (response []string) {
-	items := ninja.GetMaps(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryMaps, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.Name)
 			if len(item.FlavourText) > 0 {
@@ -257,15 +191,7 @@ func maps(message string) (response []string) {
 			itemMessage += fmt.Sprintf("**Tier:** ```%.2f```\n", item.MapTier)
 			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosValue)
 			itemMessage += fmt.Sprintf("**Price in Exalted Orbs:** ```%.2f```\n", item.ExaltedValue)
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())
@@ -274,10 +200,9 @@ func maps(message string) (response []string) {
 }
 
 func uniques(message string) (response []string) {
-	items := ninja.GetUniques(message)
-	var responseMessage string
+	items := ninja.SearchItems(ninja.CategoryUniques, message)
 	if len(items) > 0 {
-		for k, item := range items {
+		for _, item := range items {
 			var itemMessage string
 			itemMessage += fmt.Sprintf("__**%s:**__\n", item.Name)
 			if len(item.FlavourText) > 0 {
@@ -291,15 +216,7 @@ func uniques(message string) (response []string) {
 			}
 			itemMessage += fmt.Sprintf("**Price in Chaos Orbs:** ```%.2f```\n", item.ChaosValue)
 			itemMessage += fmt.Sprintf("**Price in Exalted Orbs:** ```%.2f```\n", item.ExaltedValue)
-			if len(responseMessage)+len(itemMessage) > discordMessageLength {
-				response = append(response, responseMessage)
-				responseMessage = itemMessage
-			} else {
-				responseMessage += itemMessage
-			}
-			if k == len(items)-1 {
-				response = append(response, responseMessage)
-			}
+			response = append(response, itemMessage)
 		}
 	} else {
 		response = append(response, notFoundError())

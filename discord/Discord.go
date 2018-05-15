@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const discordMessageLength = 2000
+
 func Run(token string) (*discordgo.Session, error) {
 	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
@@ -41,11 +43,28 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if !strings.HasPrefix(message, "!") {
 		return
 	}
-	response := commands.Process(message)
+	responseMessages := commands.Process(message)
+
+	var response []string
+	var responseMessage string
+
+	for k, responseMessageItem := range responseMessages {
+		if len(responseMessage)+len(responseMessageItem) > discordMessageLength {
+			response = append(response, responseMessage)
+			responseMessage = responseMessageItem
+		} else {
+			responseMessage += responseMessageItem
+		}
+		if k == len(responseMessages)-1 {
+			response = append(response, responseMessage)
+		}
+	}
+
 	for _, responseMessage := range response {
 		_, err := s.ChannelMessageSend(m.ChannelID, responseMessage)
 		if err != nil {
 			log.Println(err)
 		}
 	}
+
 }
