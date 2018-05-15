@@ -1,10 +1,10 @@
 package discord
 
 import (
-	"github.com/bwmarrin/discordgo"
-	"log"
 	"github.com/Mi7teR/shavronne/commands"
 	"github.com/Mi7teR/shavronne/ninja"
+	"github.com/bwmarrin/discordgo"
+	"log"
 	"regexp"
 	"strings"
 )

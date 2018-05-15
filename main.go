@@ -1,12 +1,12 @@
 package main
 
 import (
+	"flag"
+	"github.com/Mi7teR/shavronne/discord"
 	"log"
 	"os"
 	"os/signal"
-	"github.com/Mi7teR/shavronne/discord"
 	"syscall"
-	"flag"
 )
 
 func main() {
